@@ -71,6 +71,9 @@ def handle_all_messages(message):
         bot.reply_to(message, "❌ خطأ: لم يتم تهيئة مفتاح Hugging Face (HF_TOKEN) في ملف الإعدادات.")
         return
 
+    # Send an immediate status message to reassure the user
+    status_msg = bot.reply_to(message, "⚡ جاري التفكير ومعالجة طلبك، يرجى الانتظار...")
+
     # Show typing status
     bot.send_chat_action(chat_id, 'typing')
 
@@ -97,15 +100,34 @@ def handle_all_messages(message):
             bot_response = data["choices"][0]["message"]["content"]
             
             try:
-                bot.reply_to(message, bot_response, parse_mode="Markdown")
+                # Edit the status message with the final formatted response
+                bot.edit_message_text(
+                    text=bot_response,
+                    chat_id=chat_id,
+                    message_id=status_msg.message_id,
+                    parse_mode="Markdown"
+                )
             except Exception:
-                bot.reply_to(message, bot_response)
+                # If Markdown parsing fails, fallback to plain text edit
+                bot.edit_message_text(
+                    text=bot_response,
+                    chat_id=chat_id,
+                    message_id=status_msg.message_id
+                )
         else:
             print(f"HF API Error: Status {response.status_code}, Body: {response.text}")
-            bot.reply_to(message, "⚠️ عذراً، حدث خطأ أثناء الاتصال بنموذج الذكاء الاصطناعي. يرجى المحاولة مرة أخرى لاحقاً.")
+            bot.edit_message_text(
+                text="⚠️ عذراً، حدث خطأ أثناء الاتصال بنموذج الذكاء الاصطناعي. يرجى المحاولة مرة أخرى لاحقاً.",
+                chat_id=chat_id,
+                message_id=status_msg.message_id
+            )
     except Exception as e:
         print(f"Error handling message: {e}")
-        bot.reply_to(message, "❌ حدث خطأ غير متوقع أثناء معالجة طلبك.")
+        bot.edit_message_text(
+            text="❌ حدث خطأ غير متوقع أثناء معالجة طلبك.",
+            chat_id=chat_id,
+            message_id=status_msg.message_id
+        )
 
 if __name__ == "__main__":
     print("🤖 Excel Expert Telegram Bot is starting...")
